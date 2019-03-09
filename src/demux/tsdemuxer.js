@@ -228,18 +228,6 @@ class TSDemuxer {
             id3Data.size += start + 188 - offset;
           }
           break;
-        case privId:
-          if (stt) {
-            if (privData && (pes = parsePES(privData)) && pes.pts !== undefined) {
-              parsePrivPES(pes);
-            }
-            privData = { data: [], size: 0 };
-          }
-          if (privData) {
-            privData.data.push(data.subarray(offset, start + 188));
-            privData.size += start + 188 - offset;
-          }
-          break;
         case 0:
           if (stt) {
             offset += data[offset] + 1;
@@ -275,8 +263,11 @@ class TSDemuxer {
             id3Track.pid = id3Id;
           }
 
-          if (parsedPIDs.priv > 0) {
-            privTrack.pid = parsedPIDs.priv;
+          if (parsedPIDs.priv.length > 0) {
+            privTrack.pids = parsedPIDs.priv;
+            for (let i = 0; i < parsedPIDs.priv.length; i++) {
+              privTrack[parsedPIDs.priv[i]] = true;
+            }
           }
 
           if (unknownPIDs && !pmtParsed) {
@@ -291,7 +282,22 @@ class TSDemuxer {
         case 0x1fff:
           break;
         default:
-          unknownPIDs = true;
+          if (privTrack[pid] === true) {
+            // Handle stream_type=0x06 (ISO/IEC 13818-1 PES packets containing private data)
+            if (stt) {
+              if (privData && (pes = parsePES(privData)) && pes.pts !== undefined) {
+                parsePrivPES(privData.pid, pes);
+              }
+              privData = { pid: -1, data: [], size: 0 };
+            }
+            if (privData) {
+              privData.pid = pid;
+              privData.data.push(data.subarray(offset, start + 188));
+              privData.size += start + 188 - offset;
+            }
+          } else {
+            unknownPIDs = true;
+          }
           break;
         }
       } else {
@@ -333,9 +339,10 @@ class TSDemuxer {
     }
 
     if (privData && (pes = parsePES(privData)) && pes.pts !== undefined) {
-      parsePrivPES(pes);
+      parsePrivPES(privData.pid, pes);
       privTrack.pesData = null;
     } else {
+      // either privData null or PES truncated, keep it for next frag parsing
       privTrack.pesData = privData;
     }
 
@@ -380,7 +387,7 @@ class TSDemuxer {
   }
 
   _parsePMT (data, offset, mpegSupported, isSampleAes) {
-    let sectionLength, tableEnd, programInfoLength, pid, result = { audio: -1, avc: -1, id3: -1, priv: -1, isAAC: true };
+    let sectionLength, tableEnd, programInfoLength, pid, result = { audio: -1, avc: -1, id3: -1, priv: [], isAAC: true };
     sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
     tableEnd = offset + 3 + sectionLength - 4;
     // to determine where the table is, we have to figure out how
@@ -446,9 +453,7 @@ class TSDemuxer {
         break;
         // ITU-T Rec. H.222.0 | ISO/IEC 13818-1 PES packets containing private data
       case 0x06:
-        if (result.priv === -1) {
-          result.priv = pid;
-        }
+        result.priv.push(pid);
         break;
       case 0x24:
         logger.warn('HEVC stream type found, not supported for now');
@@ -1083,7 +1088,8 @@ class TSDemuxer {
     this._id3Track.samples.push(pes);
   }
 
-  _parsePrivateDataPES (pes) {
+  _parsePrivateDataPES (pid, pes) {
+    pes.pid = pid;
     this._privTrack.samples.push(pes);
   }
 }
