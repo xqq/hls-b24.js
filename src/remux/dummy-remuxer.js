@@ -16,7 +16,7 @@ class DummyRemuxer {
   resetTimeStamp () {
   }
 
-  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset) {
+  remux (audioTrack, videoTrack, id3Track, textTrack, privTrack, timeOffset) {
     this._remuxAACSamples(audioTrack, timeOffset);
     this._remuxAVCSamples(videoTrack, timeOffset);
     this._remuxID3Samples(id3Track, timeOffset);
@@ -65,6 +65,16 @@ class DummyRemuxer {
     while (track.samples.length) {
       textSample = track.samples.shift();
       bytes = textSample.bytes;
+    }
+    // please lint
+    timeOffset = timeOffset;
+  }
+
+  _remuxPrivSamples (track, timeOffset) {
+    let privSample, bytes;
+    while (track.samples.length) {
+      privSample = track.samples.shift();
+      bytes = privSample.len;
     }
     // please lint
     timeOffset = timeOffset;

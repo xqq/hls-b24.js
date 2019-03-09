@@ -17,7 +17,7 @@ class PassThroughRemuxer {
   resetInitSegment () {
   }
 
-  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, rawData) {
+  remux (audioTrack, videoTrack, id3Track, textTrack, privTrack, timeOffset, contiguous, accurateTimeOffset, rawData) {
     let observer = this.observer;
     let streamType = '';
     if (audioTrack) {

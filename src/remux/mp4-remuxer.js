@@ -34,7 +34,7 @@ class MP4Remuxer {
     this.ISGenerated = false;
   }
 
-  remux (audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+  remux (audioTrack, videoTrack, id3Track, textTrack, privTrack, timeOffset, contiguous, accurateTimeOffset) {
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack, videoTrack, timeOffset);
@@ -96,6 +96,10 @@ class MP4Remuxer {
     // logger.log('nb ID3 samples:' + audioTrack.samples.length);
     if (textTrack.samples.length) {
       this.remuxText(textTrack, timeOffset);
+    }
+
+    if (privTrack.samples.length) {
+      this.remuxPrivateData(privTrack, timeOffset);
     }
 
     // notify end of parsing
@@ -764,6 +768,27 @@ class MP4Remuxer {
       });
     }
 
+    track.samples = [];
+  }
+
+  remuxPrivateData (track) {
+    track.samples.sort(function (a, b) {
+      return (a.pts - b.pts);
+    });
+
+    let length = track.samples.length;
+    const inputTimeScale = track.inputTimeScale;
+    const initPTS = this._initPTS;
+    // consume samples
+    if (length) {
+      for (let index = 0; index < length; index++) {
+        let sample = track.samples[index];
+        sample.dts = sample.pts = ((sample.pts - initPTS) / inputTimeScale);
+      }
+      this.observer.trigger(Event.FRAG_PARSING_PRIVATE_DATA, {
+        samples: track.samples
+      });
+    }
     track.samples = [];
   }
 

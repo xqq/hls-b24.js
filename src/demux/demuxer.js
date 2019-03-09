@@ -37,6 +37,7 @@ class Demuxer {
     observer.on(Event.ERROR, forwardMessage);
     observer.on(Event.FRAG_PARSING_METADATA, forwardMessage);
     observer.on(Event.FRAG_PARSING_USERDATA, forwardMessage);
+    observer.on(Event.FRAG_PARSING_PRIVATE_DATA, forwardMessage);
     observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
     const typeSupported = {
