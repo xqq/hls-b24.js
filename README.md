@@ -5,7 +5,7 @@
 
 Join the discussion via [video-dev.org](http://video-dev.org) in #hlsjs (our Slack channel)
 
-# hls.b24.js
+# hls-b24.js
 This is an hls.js fork which extracts and provides data callback for ISO/IEC 13818-1 private data PES packets.
 
 # ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
