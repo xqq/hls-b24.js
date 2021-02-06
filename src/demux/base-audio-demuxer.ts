@@ -8,6 +8,7 @@ import type {
   DemuxedAvcTrack,
   DemuxedUserdataTrack,
   KeyData,
+  DemuxedPrivdataTrack,
 } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -112,6 +113,7 @@ class BaseAudioDemuxer implements Demuxer {
       avcTrack: dummyTrack() as DemuxedAvcTrack,
       id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
+      privTrack: dummyTrack() as DemuxedPrivdataTrack,
     };
   }
 
@@ -139,6 +141,7 @@ class BaseAudioDemuxer implements Demuxer {
       avcTrack: dummyTrack() as DemuxedAvcTrack,
       id3Track: this._id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
+      privTrack: dummyTrack() as DemuxedPrivdataTrack,
     };
   }
 

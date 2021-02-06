@@ -256,7 +256,13 @@ export default class Transmuxer {
   }
 
   private flushRemux(transmuxResults, demuxResult, chunkMeta) {
-    const { audioTrack, avcTrack, id3Track, textTrack } = demuxResult;
+    const {
+      audioTrack,
+      avcTrack,
+      id3Track,
+      textTrack,
+      privTrack,
+    } = demuxResult;
     const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
     logger.log(
       `[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${
@@ -268,6 +274,7 @@ export default class Transmuxer {
       avcTrack,
       id3Track,
       textTrack,
+      privTrack,
       timeOffset,
       accurateTimeOffset,
       true
@@ -356,13 +363,14 @@ export default class Transmuxer {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
   ): TransmuxerResult {
-    const { audioTrack, avcTrack, id3Track, textTrack } = (this
+    const { audioTrack, avcTrack, id3Track, textTrack, privTrack } = (this
       .demuxer as Demuxer).demux(data, timeOffset, false);
     const remuxResult = this.remuxer!.remux(
       audioTrack,
       avcTrack,
       id3Track,
       textTrack,
+      privTrack,
       timeOffset,
       accurateTimeOffset,
       false
@@ -388,6 +396,7 @@ export default class Transmuxer {
           demuxResult.avcTrack,
           demuxResult.id3Track,
           demuxResult.textTrack,
+          demuxResult.privTrack,
           timeOffset,
           accurateTimeOffset,
           false

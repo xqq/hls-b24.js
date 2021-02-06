@@ -31,6 +31,8 @@ import type {
   DemuxedUserdataTrack,
   ElementaryStreamData,
   KeyData,
+  DemuxedPrivdataTrack,
+  PrivdataSample,
 } from '../types/demuxer';
 
 // We are using fixed track IDs for driving the MP4 remuxer
@@ -87,6 +89,7 @@ class TSDemuxer implements Demuxer {
   private _audioTrack!: DemuxedAudioTrack;
   private _id3Track!: DemuxedMetadataTrack;
   private _txtTrack!: DemuxedUserdataTrack;
+  private _privTrack!: DemuxedPrivdataTrack;
   private aacOverFlow: Uint8Array | null = null;
   private avcSample: ParsedAvcSample | null = null;
   private remainderData: Uint8Array | null = null;
@@ -143,7 +146,7 @@ class TSDemuxer implements Demuxer {
    * @return TSDemuxer's internal track model
    */
   static createTrack(
-    type: 'audio' | 'video' | 'id3' | 'text',
+    type: 'audio' | 'video' | 'id3' | 'text' | 'data',
     duration: number
   ): DemuxedTrack {
     return {
@@ -188,6 +191,10 @@ class TSDemuxer implements Demuxer {
       'text',
       duration
     ) as DemuxedUserdataTrack;
+    this._privTrack = TSDemuxer.createTrack(
+      'data',
+      duration
+    ) as DemuxedPrivdataTrack;
     this._audioTrack.isAAC = true;
 
     // flush any partial content
@@ -231,6 +238,7 @@ class TSDemuxer implements Demuxer {
     const avcTrack = this._avcTrack;
     const audioTrack = this._audioTrack;
     const id3Track = this._id3Track;
+    const privTrack = this._privTrack;
 
     let avcId = avcTrack.pid;
     let avcData = avcTrack.pesData;
@@ -241,6 +249,8 @@ class TSDemuxer implements Demuxer {
     let unknownPIDs = false;
     let pmtParsed = this.pmtParsed;
     let pmtId = this._pmtId;
+    const privId = this._privTrack.pid;
+    let privData = privTrack.pesData;
 
     let len = data.length;
     if (this.remainderData) {
@@ -256,6 +266,7 @@ class TSDemuxer implements Demuxer {
         avcTrack,
         id3Track,
         textTrack: this._txtTrack,
+        privTrack,
       };
     }
 
@@ -373,6 +384,13 @@ class TSDemuxer implements Demuxer {
               id3Track.pid = id3Id;
             }
 
+            if (parsedPIDs.priv.length > 0) {
+              privTrack.pids = parsedPIDs.priv;
+              for (let i = 0; i < parsedPIDs.priv.length; i++) {
+                privTrack[parsedPIDs.priv[i]] = true;
+              }
+            }
+
             if (unknownPIDs && !pmtParsed) {
               logger.log('reparse from beginning');
               unknownPIDs = false;
@@ -386,7 +404,26 @@ class TSDemuxer implements Demuxer {
           case 0x1fff:
             break;
           default:
-            unknownPIDs = true;
+            if (privTrack[pid] === true) {
+              // Handle stream_type=0x06 (ISO/IEC 13818-1 PES packets containing private data)
+              if (stt) {
+                if (
+                  privData &&
+                  (pes = parsePES(privData)) &&
+                  pes.pts !== undefined
+                ) {
+                  this.parsePrivateDataPES(privData.pid!, pes);
+                }
+                privData = { pid: -1, data: [], size: 0 };
+              }
+              if (privData) {
+                privData.pid = pid;
+                privData.data.push(data.subarray(offset, start + 188));
+                privData.size += start + 188 - offset;
+              }
+            } else {
+              unknownPIDs = true;
+            }
             break;
         }
       } else {
@@ -403,11 +440,20 @@ class TSDemuxer implements Demuxer {
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
 
+    if (privData && (pes = parsePES(privData)) && pes.pts !== undefined) {
+      this.parsePrivateDataPES(privData.pid!, pes);
+      privTrack.pesData = null;
+    } else {
+      // either privData null or PES truncated, keep it for next frag parsing
+      privTrack.pesData = privData;
+    }
+
     return {
       audioTrack,
       avcTrack,
       id3Track,
       textTrack: this._txtTrack,
+      privTrack,
     };
   }
 
@@ -423,6 +469,7 @@ class TSDemuxer implements Demuxer {
         avcTrack: this._avcTrack,
         textTrack: this._txtTrack,
         id3Track: this._id3Track,
+        privTrack: this._privTrack,
       };
     }
     this.extractRemainingSamples(result);
@@ -1063,6 +1110,11 @@ class TSDemuxer implements Demuxer {
     }
     this._id3Track.samples.push(pes as Required<PES>);
   }
+
+  private parsePrivateDataPES(pid: number, pes: PES) {
+    const _pes = { ...pes, pts: pes.pts!, dts: pes.dts!, pid };
+    this._privTrack.samples.push(_pes);
+  }
 }
 
 function createAVCSample(
@@ -1089,7 +1141,13 @@ function parsePAT(data, offset) {
 }
 
 function parsePMT(data, offset, mpegSupported, isSampleAes) {
-  const result = { audio: -1, avc: -1, id3: -1, isAAC: true };
+  const result = {
+    audio: -1,
+    avc: -1,
+    id3: -1,
+    priv: [] as number[],
+    isAAC: true,
+  };
   const sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
   const tableEnd = offset + 3 + sectionLength - 4;
   // to determine where the table is, we have to figure out how
@@ -1153,6 +1211,10 @@ function parsePMT(data, offset, mpegSupported, isSampleAes) {
           result.audio = pid;
           result.isAAC = false;
         }
+        break;
+
+      case 0x06:
+        result.priv.push(pid);
         break;
 
       case 0x24:

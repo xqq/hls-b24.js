@@ -9,6 +9,7 @@ import {
   DemuxedUserdataTrack,
   DemuxedMetadataTrack,
   KeyData,
+  DemuxedPrivdataTrack,
 } from '../types/demuxer';
 import {
   findBox,
@@ -66,6 +67,7 @@ class MP4Demuxer implements Demuxer {
       avcTrack,
       id3Track: dummyTrack() as DemuxedMetadataTrack,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
+      privTrack: dummyTrack() as DemuxedPrivdataTrack,
     };
   }
 
@@ -79,6 +81,7 @@ class MP4Demuxer implements Demuxer {
       avcTrack,
       id3Track: dummyTrack() as DemuxedMetadataTrack,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
+      privTrack: dummyTrack() as DemuxedPrivdataTrack,
     };
   }
 

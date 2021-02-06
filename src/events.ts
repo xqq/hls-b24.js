@@ -46,6 +46,7 @@ import {
   LiveBackBufferData,
   TrackLoadingData,
   BufferFlushedData,
+  FragParsingPrivateData,
 } from './types/events';
 
 /**
@@ -139,6 +140,8 @@ export enum Events {
   FRAG_PARSING_INIT_SEGMENT = 'hlsFragParsingInitSegment',
   // fired when parsing sei text is completed - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ] }
   FRAG_PARSING_USERDATA = 'hlsFragParsingUserdata',
+  // fired when parsing PES packet private data is completed - data: { id : demuxer id, samples : [private data pes] }
+  FRAG_PARSING_PRIVATE_DATA = 'hlsFragParsingPrivateData',
   // fired when parsing id3 is completed - data: { id : demuxer id, frag: fragment object, samples : [ id3 samples pes ] }
   FRAG_PARSING_METADATA = 'hlsFragParsingMetadata',
   // fired when data have been extracted from fragment - data: { id : demuxer id, frag: fragment object, data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
@@ -321,6 +324,10 @@ export interface HlsListeners {
   [Events.FRAG_PARSING_USERDATA]: (
     event: Events.FRAG_PARSING_USERDATA,
     data: FragParsingUserdataData
+  ) => void;
+  [Events.FRAG_PARSING_PRIVATE_DATA]: (
+    event: Events.FRAG_PARSING_PRIVATE_DATA,
+    data: FragParsingPrivateData
   ) => void;
   [Events.FRAG_PARSING_METADATA]: (
     event: Events.FRAG_PARSING_METADATA,

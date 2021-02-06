@@ -11,6 +11,7 @@ import {
   RemuxedMetadata,
   RemuxedTrack,
   RemuxedUserdata,
+  RemuxedPrivdata,
 } from '../types/remuxer';
 import type {
   AudioSample,
@@ -18,6 +19,7 @@ import type {
   DemuxedAudioTrack,
   DemuxedAvcTrack,
   DemuxedMetadataTrack,
+  DemuxedPrivdataTrack,
   DemuxedUserdataTrack,
 } from '../types/demuxer';
 import type { TrackSet } from '../types/track';
@@ -114,6 +116,7 @@ export default class MP4Remuxer implements Remuxer {
     videoTrack: DemuxedAvcTrack,
     id3Track: DemuxedMetadataTrack,
     textTrack: DemuxedUserdataTrack,
+    privTrack: DemuxedPrivdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
     flush: boolean
@@ -123,6 +126,7 @@ export default class MP4Remuxer implements Remuxer {
     let initSegment;
     let text;
     let id3;
+    let priv;
     let independent: boolean | undefined;
     let audioTimeOffset = timeOffset;
     let videoTimeOffset = timeOffset;
@@ -246,6 +250,10 @@ export default class MP4Remuxer implements Remuxer {
       }
     }
 
+    if (privTrack.samples.length) {
+      priv = this.remuxPrivateData(privTrack, timeOffset);
+    }
+
     return {
       audio,
       video,
@@ -253,6 +261,7 @@ export default class MP4Remuxer implements Remuxer {
       independent,
       text,
       id3,
+      priv,
     };
   }
 
@@ -1090,6 +1099,31 @@ export default class MP4Remuxer implements Remuxer {
     return {
       samples,
     };
+  }
+
+  remuxPrivateData(
+    track: DemuxedPrivdataTrack,
+    timeOffset: number
+  ): RemuxedPrivdata | undefined {
+    const length = track.samples.length;
+    if (!length) {
+      return;
+    }
+    track.samples.sort(function (a, b) {
+      return a.pts - b.pts;
+    });
+
+    const inputTimeScale = track.inputTimeScale;
+    const initPTS = this._initPTS;
+    // consume samples
+    for (let index = 0; index < length; index++) {
+      const sample = track.samples[index];
+      sample.dts = sample.pts = (sample.pts - initPTS) / inputTimeScale;
+    }
+    track.samples.sort((a, b) => a.pts - b.pts);
+    const samples = track.samples;
+    track.samples = [];
+    return { samples };
   }
 }
 

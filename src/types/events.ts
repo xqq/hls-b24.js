@@ -18,7 +18,7 @@ import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
 import type LoadStats from '../loader/load-stats';
 import type { ErrorDetails, ErrorTypes } from '../errors';
-import type { MetadataSample, UserdataSample } from './demuxer';
+import type { MetadataSample, PrivdataSample, UserdataSample } from './demuxer';
 import type AttrList from '../utils/attr-list';
 import type { HlsListeners } from '../events';
 
@@ -303,6 +303,11 @@ export interface FragParsingUserdataData {
   id: string;
   frag: Fragment;
   samples: UserdataSample[];
+}
+
+export interface FragParsingPrivateData {
+  id: string;
+  samples: PrivdataSample[];
 }
 
 export interface FragParsingMetadataData {

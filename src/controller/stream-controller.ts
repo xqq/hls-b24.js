@@ -35,6 +35,7 @@ import type {
   BufferFlushedData,
   ErrorData,
   BufferEOSData,
+  FragParsingPrivateData,
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -1103,7 +1104,7 @@ export default class StreamController
       return;
     }
     const { frag, part, level } = context;
-    const { video, text, id3, initSegment } = remuxResult;
+    const { video, text, id3, initSegment, priv } = remuxResult;
     // The audio-stream-controller handles audio buffering if Hls.js is playing an alternate audio track
     const audio = this.altAudio ? undefined : remuxResult.audio;
 
@@ -1211,6 +1212,13 @@ export default class StreamController
         samples: text.samples,
       };
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
+    }
+    if (priv) {
+      const emittedData: FragParsingPrivateData = {
+        id,
+        samples: priv.samples,
+      };
+      hls.trigger(Events.FRAG_PARSING_PRIVATE_DATA, emittedData);
     }
   }
 

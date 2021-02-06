@@ -33,6 +33,7 @@ import type {
   FragParsingMetadataData,
   FragParsingUserdataData,
   FragBufferedData,
+  FragParsingPrivateData,
 } from '../types/events';
 import type { ErrorData } from '../types/events';
 
@@ -727,7 +728,7 @@ class AudioStreamController
       return;
     }
     const { frag, part } = context;
-    const { audio, text, id3, initSegment } = remuxResult;
+    const { audio, text, id3, initSegment, priv } = remuxResult;
 
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
@@ -788,6 +789,16 @@ class AudioStreamController
         text
       );
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
+    }
+    if (priv) {
+      const emittedData: FragParsingPrivateData = Object.assign(
+        {
+          frag,
+          id,
+        },
+        priv
+      );
+      hls.trigger(Events.FRAG_PARSING_PRIVATE_DATA, emittedData);
     }
   }
 

@@ -25,6 +25,7 @@ export interface DemuxerResult {
   avcTrack: DemuxedVideoTrack;
   id3Track: DemuxedMetadataTrack;
   textTrack: DemuxedUserdataTrack;
+  privTrack: DemuxedPrivdataTrack;
 }
 
 export interface DemuxedTrack {
@@ -83,9 +84,22 @@ export interface DemuxedUserdataTrack extends DemuxedTrack {
   samples: UserdataSample[];
 }
 
+export interface DemuxedPrivdataTrack extends DemuxedTrack {
+  samples: PrivdataSample[];
+  pids: number[];
+}
+
 export interface MetadataSample {
   pts: number;
   dts: number;
+  len?: number;
+  data: Uint8Array;
+}
+
+export interface PrivdataSample {
+  pts: number;
+  dts: number;
+  pid: number;
   len?: number;
   data: Uint8Array;
 }
@@ -124,6 +138,7 @@ export type AppendedAudioFrame = {
 export interface ElementaryStreamData {
   data: Uint8Array[];
   size: number;
+  pid?: number;
 }
 
 export interface KeyData {

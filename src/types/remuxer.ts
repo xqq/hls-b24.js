@@ -2,10 +2,12 @@ import type { TrackSet } from './track';
 import {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
+  DemuxedPrivdataTrack,
   DemuxedTrack,
   DemuxedUserdataTrack,
   DemuxedVideoTrack,
   MetadataSample,
+  PrivdataSample,
   UserdataSample,
 } from './demuxer';
 import type { SourceBufferName } from './buffer';
@@ -16,6 +18,7 @@ export interface Remuxer {
     videoTrack: DemuxedVideoTrack,
     id3Track: DemuxedMetadataTrack,
     textTrack: DemuxedUserdataTrack,
+    privTrack: DemuxedPrivdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
     flush: boolean
@@ -51,6 +54,10 @@ export interface RemuxedMetadata {
   samples: MetadataSample[];
 }
 
+export interface RemuxedPrivdata {
+  samples: PrivdataSample[];
+}
+
 export interface RemuxedUserdata {
   samples: UserdataSample[];
 }
@@ -60,6 +67,7 @@ export interface RemuxerResult {
   video?: RemuxedTrack;
   text?: RemuxedUserdata;
   id3?: RemuxedMetadata;
+  priv?: RemuxedPrivdata;
   initSegment?: InitSegmentData;
   independent?: boolean;
 }
