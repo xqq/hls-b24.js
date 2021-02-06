@@ -1,6 +1,6 @@
 {
   "name": "hls-b24.js",
-  "version": "0.12.3",
+  "version": "1.0.0-beta.4.0.canary.6766",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/xqq/hls.js",
