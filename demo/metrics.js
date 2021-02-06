@@ -1,12 +1,25 @@
-function showMetrics()  {
+/* global $, events, eventLeftMargin, canvasBufferTimeRangeUpdate, canvasBufferWindowUpdate, canvasBitrateEventUpdate,
+   canvasVideoEventUpdate, canvasLoadEventUpdate */
+/* eslint no-var: 0 */
+var windowDuration = 20000;
+var windowSliding = true;
+var windowStart = 0;
+var windowEnd = 10000;
+var windowFocus;
+var metricsDisplayed = false;
+var timeRangeMouseDown = false;
+
+$('#windowStart').val(windowStart);
+$('#windowEnd').val(windowEnd);
+
+function showMetrics() {
   metricsDisplayed = true;
   var width = window.innerWidth - 30;
-  $('#bufferWindow_c')[0].width =
-    $('#bitrateTimerange_c')[0].width =
-    $('#bufferTimerange_c')[0].width =
-    $('#videoEvent_c')[0].width =
-    $('#metricsButton')[0].width =
-    $('#loadEvent_c')[0].width = width;
+  $('#bufferWindow_c')[0].width = $('#bitrateTimerange_c')[0].width = $(
+    '#bufferTimerange_c'
+  )[0].width = $('#videoEvent_c')[0].width = $('#metricsButton')[0].width = $(
+    '#loadEvent_c'
+  )[0].width = width;
   $('#bufferWindow_c').show();
   $('#bitrateTimerange_c').show();
   $('#bufferTimerange_c').show();
@@ -15,7 +28,7 @@ function showMetrics()  {
   $('#loadEvent_c').show();
 }
 
-function hideMetrics()  {
+function hideMetrics() {
   metricsDisplayed = false;
   $('#bufferWindow_c').hide();
   $('#bitrateTimerange_c').hide();
@@ -31,37 +44,52 @@ function timeRangeSetSliding(duration) {
   refreshCanvas();
 }
 
-var timeRangeMouseDown=false;
 function timeRangeCanvasonMouseDown(evt) {
-  var canvas = evt.currentTarget,
-    bRect = canvas.getBoundingClientRect(),
-    mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width));
-  windowStart = Math.max(0,Math.round((mouseX-eventLeftMargin) * getWindowTimeRange().now / (canvas.width-eventLeftMargin)));
-  windowEnd = windowStart+500;
+  var canvas = evt.currentTarget;
+  var bRect = canvas.getBoundingClientRect();
+  var mouseX = Math.round(
+    (evt.clientX - bRect.left) * (canvas.width / bRect.width)
+  );
+  windowStart = Math.max(
+    0,
+    Math.round(
+      ((mouseX - eventLeftMargin) * getWindowTimeRange().now) /
+        (canvas.width - eventLeftMargin)
+    )
+  );
+  windowEnd = windowStart + 500;
   timeRangeMouseDown = true;
   windowSliding = false;
-  //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
+  // console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
   $('#windowStart').val(windowStart);
   $('#windowEnd').val(windowEnd);
   refreshCanvas();
 }
 
 function timeRangeCanvasonMouseMove(evt) {
-  if(timeRangeMouseDown) {
-    var canvas = evt.currentTarget,
-      bRect = canvas.getBoundingClientRect(),
-      mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
-      pos = Math.max(0,Math.round((mouseX-eventLeftMargin) * getWindowTimeRange().now / (canvas.width-eventLeftMargin)));
-    if(pos < windowStart) {
+  if (timeRangeMouseDown) {
+    var canvas = evt.currentTarget;
+    var bRect = canvas.getBoundingClientRect();
+    var mouseX = Math.round(
+      (evt.clientX - bRect.left) * (canvas.width / bRect.width)
+    );
+    var pos = Math.max(
+      0,
+      Math.round(
+        ((mouseX - eventLeftMargin) * getWindowTimeRange().now) /
+          (canvas.width - eventLeftMargin)
+      )
+    );
+    if (pos < windowStart) {
       windowStart = pos;
     } else {
       windowEnd = pos;
     }
-    if(windowStart === windowEnd) {
+    if (windowStart === windowEnd) {
       // to avoid division by zero ...
-      windowEnd +=50;
+      windowEnd += 50;
     }
-    //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
+    // console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
     $('#windowStart').val(windowStart);
     $('#windowEnd').val(windowEnd);
     refreshCanvas();
@@ -77,49 +105,89 @@ function timeRangeCanvasonMouseOut(evt) {
 }
 
 function windowCanvasonMouseMove(evt) {
-  var canvas = evt.currentTarget,
-    bRect = canvas.getBoundingClientRect(),
-    mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
-    timeRange = getWindowTimeRange();
-  windowFocus = timeRange.min + Math.max(0,Math.round((mouseX-eventLeftMargin) * (timeRange.max - timeRange.min)  / (canvas.width-eventLeftMargin)));
-  //console.log(windowFocus);
+  var canvas = evt.currentTarget;
+  var bRect = canvas.getBoundingClientRect();
+  var mouseX = Math.round(
+    (evt.clientX - bRect.left) * (canvas.width / bRect.width)
+  );
+  var timeRange = getWindowTimeRange();
+  windowFocus =
+    timeRange.min +
+    Math.max(
+      0,
+      Math.round(
+        ((mouseX - eventLeftMargin) * (timeRange.max - timeRange.min)) /
+          (canvas.width - eventLeftMargin)
+      )
+    );
+  // console.log(windowFocus);
   refreshCanvas();
 }
 
-var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000,windowFocus,metricsDisplayed=false;
-$('#windowStart').val(windowStart);
-$('#windowEnd').val(windowEnd);
-function refreshCanvas()  {
-  if(metricsDisplayed) {
+function refreshCanvas() {
+  if (metricsDisplayed) {
     try {
       var windowTime = getWindowTimeRange();
-      canvasBufferTimeRangeUpdate($('#bufferTimerange_c')[0], 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
-      if(windowTime.min !== 0 || windowTime.max !== windowTime.now) {
+      canvasBufferTimeRangeUpdate(
+        $('#bufferTimerange_c')[0],
+        0,
+        windowTime.now,
+        windowTime.min,
+        windowTime.max,
+        events.buffer
+      );
+      if (windowTime.min !== 0 || windowTime.max !== windowTime.now) {
         $('#bufferWindow_c').show();
-        canvasBufferWindowUpdate($('#bufferWindow_c')[0], windowTime.min,windowTime.max, windowTime.focus, events.buffer);
+        canvasBufferWindowUpdate(
+          $('#bufferWindow_c')[0],
+          windowTime.min,
+          windowTime.max,
+          windowTime.focus,
+          events.buffer
+        );
       } else {
         $('#bufferWindow_c').hide();
       }
-      canvasBitrateEventUpdate($('#bitrateTimerange_c')[0], 0, windowTime.now, windowTime.min,windowTime.max, events.level, events.bitrate);
-      canvasVideoEventUpdate($('#videoEvent_c')[0], windowTime.min,windowTime.max, events.video);
-      canvasLoadEventUpdate($('#loadEvent_c')[0], windowTime.min,windowTime.max, events.load);
-    } catch(err) {
-      console.log('refreshCanvas error:' +err.message);
+      canvasBitrateEventUpdate(
+        $('#bitrateTimerange_c')[0],
+        0,
+        windowTime.now,
+        windowTime.min,
+        windowTime.max,
+        events.level,
+        events.bitrate
+      );
+      canvasVideoEventUpdate(
+        $('#videoEvent_c')[0],
+        windowTime.min,
+        windowTime.max,
+        events.video
+      );
+      canvasLoadEventUpdate(
+        $('#loadEvent_c')[0],
+        windowTime.min,
+        windowTime.max,
+        events.load
+      );
+    } catch (err) {
+      console.log('refreshCanvas error:' + err.message);
     }
   }
 }
 
 function getWindowTimeRange() {
-  var tnow,minTime,maxTime;
-  if(events.buffer.length) {
-    tnow = events.buffer[events.buffer.length-1].time;
+  var tnow;
+  var minTime;
+  var maxTime;
+  if (events.buffer.length) {
+    tnow = events.buffer[events.buffer.length - 1].time;
   } else {
     tnow = 0;
   }
-  if(windowSliding) {
+  if (windowSliding) {
     // let's show the requested window
-    if(windowDuration) {
-      minTime = Math.max(0, tnow-windowDuration),
+    if (windowDuration) {
+      minTime = Math.max(0, tnow - windowDuration);
       maxTime = Math.min(minTime + windowDuration, tnow);
     } else {
       minTime = 0;
@@ -129,21 +197,25 @@ function getWindowTimeRange() {
     minTime = windowStart;
     maxTime = windowEnd;
   }
-  if(windowFocus === undefined || windowFocus < minTime || windowFocus > maxTime) {
+  if (
+    windowFocus === undefined ||
+    windowFocus < minTime ||
+    windowFocus > maxTime
+  ) {
     windowFocus = minTime;
   }
-  return { min : minTime, max: maxTime, now : tnow, focus : windowFocus}
+  return { min: minTime, max: maxTime, now: tnow, focus: windowFocus };
 }
 
 function timeRangeZoomIn() {
-  if(windowSliding) {
-    windowDuration/=2;
+  if (windowSliding) {
+    windowDuration /= 2;
   } else {
-    var duration = windowEnd-windowStart;
-    windowStart+=duration/4;
-    windowEnd-=duration/4;
-    if(windowStart === windowEnd) {
-      windowEnd+=50;
+    var duration = windowEnd - windowStart;
+    windowStart += duration / 4;
+    windowEnd -= duration / 4;
+    if (windowStart === windowEnd) {
+      windowEnd += 50;
     }
   }
   $('#windowStart').val(windowStart);
@@ -152,14 +224,17 @@ function timeRangeZoomIn() {
 }
 
 function timeRangeZoomOut() {
-  if(windowSliding) {
-    windowDuration*=2;
-  }  else {
-    var duration = windowEnd-windowStart;
-    windowStart-=duration/2;
-    windowEnd+=duration/2;
-    windowStart=Math.max(0,windowStart);
-    windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
+  if (windowSliding) {
+    windowDuration *= 2;
+  } else {
+    var duration = windowEnd - windowStart;
+    windowStart -= duration / 2;
+    windowEnd += duration / 2;
+    windowStart = Math.max(0, windowStart);
+    windowEnd = Math.min(
+      events.buffer[events.buffer.length - 1].time,
+      windowEnd
+    );
   }
   $('#windowStart').val(windowStart);
   $('#windowEnd').val(windowEnd);
@@ -167,22 +242,22 @@ function timeRangeZoomOut() {
 }
 
 function timeRangeSlideLeft() {
-  var duration = windowEnd-windowStart;
-  windowStart-=duration/4;
-  windowEnd-=duration/4;
-  windowStart=Math.max(0,windowStart);
-  windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
+  var duration = windowEnd - windowStart;
+  windowStart -= duration / 4;
+  windowEnd -= duration / 4;
+  windowStart = Math.max(0, windowStart);
+  windowEnd = Math.min(events.buffer[events.buffer.length - 1].time, windowEnd);
   $('#windowStart').val(windowStart);
   $('#windowEnd').val(windowEnd);
   refreshCanvas();
 }
 
 function timeRangeSlideRight() {
-  var duration = windowEnd-windowStart;
-  windowStart+=duration/4;
-  windowEnd+=duration/4;
-  windowStart=Math.max(0,windowStart);
-  windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
+  var duration = windowEnd - windowStart;
+  windowStart += duration / 4;
+  windowEnd += duration / 4;
+  windowStart = Math.max(0, windowStart);
+  windowEnd = Math.min(events.buffer[events.buffer.length - 1].time, windowEnd);
   $('#windowStart').val(windowStart);
   $('#windowEnd').val(windowEnd);
   refreshCanvas();
