@@ -1,7 +1,4 @@
-// Karma configuration
-// Generated on Tue Jul 18 2017 12:17:16 GMT-0700 (PDT)
-const path = require('path');
-const merge = require('webpack-merge');
+const { merge } = require('webpack-merge');
 const webpackConfig = require('./webpack.config')({ debug: true })[0];
 delete webpackConfig.entry;
 delete webpackConfig.output;
@@ -11,33 +8,37 @@ const mergeConfig = merge(webpackConfig, {
     rules: [
       {
         test: /\.(ts|js)$/,
-        exclude: path.resolve(__dirname, 'node_modules'),
+        exclude: /(node_modules|tests)/,
         enforce: 'post',
         use: [
           {
             loader: 'istanbul-instrumenter-loader',
             options: {
-              esModules: true
-            }
-          }
-        ]
-      }
-    ]
-  }
+              esModules: true,
+            },
+          },
+        ],
+      },
+    ],
+  },
+  node: {
+    global: true,
+  },
 });
 
 module.exports = function (config) {
   config.set({
-    // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: '',
-
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
     frameworks: ['mocha', 'sinon-chai'],
 
     // list of files / patterns to load in the browser
+    // https://github.com/webpack-contrib/karma-webpack#alternative-usage
     files: [
-      'tests/index.js'
+      {
+        pattern: 'tests/index.js',
+        watched: false,
+      },
     ],
 
     // list of files to exclude
@@ -45,8 +46,9 @@ module.exports = function (config) {
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
+    // node_modules must not be webpacked or else Karma will fail to load frameworks
     preprocessors: {
-      'tests/index.js': ['webpack', 'sourcemap']
+      'tests/index.js': ['webpack', 'sourcemap'],
     },
 
     // test results reporter to use
@@ -56,7 +58,7 @@ module.exports = function (config) {
 
     coverageIstanbulReporter: {
       reports: ['lcov', 'text-summary'],
-      fixWebpackSourcePaths: true
+      fixWebpackSourcePaths: true,
     },
 
     webpack: mergeConfig,
@@ -84,6 +86,6 @@ module.exports = function (config) {
 
     // Concurrency level
     // how many browser should be started simultaneous
-    concurrency: Infinity
+    concurrency: Infinity,
   });
 };
