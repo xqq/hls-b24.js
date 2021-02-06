@@ -13,7 +13,7 @@
     "url": "https://github.com/xqq/hls.js/issues"
   },
   "main": "./dist/hls.js",
-  "types": "./types/index.d.ts",
+  "types": "./dist/src/hls.d.ts",
   "files": [
     "dist/**/*",
     "src/**/*"
