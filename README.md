@@ -1,6 +1,5 @@
-[![npm](https://img.shields.io/npm/v/hls.js.svg?style=flat)](https://npmjs.org/package/hls.js)
-[![npm](https://img.shields.io/npm/v/hls.js/alpha.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/alpha)
-[![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
+[![npm](https://img.shields.io/npm/v/hls-b24.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls-b24.js/v/canary)
+[![](https://data.jsdelivr.com/v1/package/npm/hls-b24.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls-b24.js)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
 
 [![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
