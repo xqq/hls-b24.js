@@ -1,8 +1,8 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { logger } from '../utils/logger';
-import LevelKey from './level-key';
-import LoadStats from './load-stats';
-import AttrList from '../utils/attr-list';
+import { LevelKey } from './level-key';
+import { LoadStats } from './load-stats';
+import { AttrList } from '../utils/attr-list';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -15,7 +15,7 @@ export enum ElementaryStreamTypes {
   AUDIOVIDEO = 'audiovideo',
 }
 
-interface ElementaryStreamInfo {
+export interface ElementaryStreamInfo {
   startPTS: number;
   endPTS: number;
   startDTS: number;
@@ -23,7 +23,7 @@ interface ElementaryStreamInfo {
   partial?: boolean;
 }
 
-type ElementaryStreams = Record<
+export type ElementaryStreams = Record<
   ElementaryStreamTypes,
   ElementaryStreamInfo | null
 >;
@@ -90,7 +90,7 @@ export class BaseSegment {
   }
 }
 
-export default class Fragment extends BaseSegment {
+export class Fragment extends BaseSegment {
   private _decryptdata: LevelKey | null = null;
 
   public rawProgramDateTime: string | null = null;
@@ -302,9 +302,7 @@ export class Part extends BaseSegment {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
     this.gap = partAttrs.bool('GAP');
-    this.independent = partAttrs.INDEPENDENT
-      ? partAttrs.bool('INDEPENDENT')
-      : true;
+    this.independent = partAttrs.bool('INDEPENDENT');
     this.relurl = partAttrs.enumeratedString('URI') as string;
     this.fragment = frag;
     this.index = index;

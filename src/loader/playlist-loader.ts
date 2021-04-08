@@ -24,10 +24,10 @@ import type {
   PlaylistLoaderContext,
 } from '../types/loader';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import LevelDetails from './level-details';
-import Fragment from './fragment';
+import { LevelDetails } from './level-details';
+import { Fragment } from './fragment';
 import type Hls from '../hls';
-import AttrList from '../utils/attr-list';
+import { AttrList } from '../utils/attr-list';
 import type {
   ErrorData,
   LevelLoadingData,
@@ -69,8 +69,6 @@ class PlaylistLoader {
   private readonly loaders: {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
-
-  private checkAgeHeader: boolean = true;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -148,7 +146,6 @@ class PlaylistLoader {
     data: ManifestLoadingData
   ) {
     const { url } = data;
-    this.checkAgeHeader = true;
     this.load({
       id: null,
       groupId: null,
@@ -686,13 +683,10 @@ class PlaylistLoader {
       return;
     }
 
-    // Avoid repeated browser error log `Refused to get unsafe header "age"` when unnecessary or past attempts failed
-    const checkAgeHeader = this.checkAgeHeader && levelDetails.live;
-    const ageHeader: string | null = checkAgeHeader
-      ? loader.getResponseHeader('age')
-      : null;
-    levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
-    this.checkAgeHeader = !!ageHeader;
+    if (levelDetails.live) {
+      const ageHeader = loader.getResponseHeader('age');
+      levelDetails.ageHeader = ageHeader ? parseFloat(ageHeader) : 0;
+    }
 
     switch (type) {
       case PlaylistContextType.MANIFEST:

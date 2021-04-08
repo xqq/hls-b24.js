@@ -10,8 +10,8 @@ import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
-import type LevelDetails from '../loader/level-details';
-import type Fragment from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
+import type { Fragment } from '../loader/fragment';
 import type {
   ErrorData,
   FragLoadedData,
@@ -46,7 +46,6 @@ export class SubtitleStreamController
     this.mediaBuffer = null;
     this.state = State.STOPPED;
     this.tracksBuffered = [];
-    this.fragmentLoader = new FragmentLoader(hls.config);
 
     this._registerListeners();
   }

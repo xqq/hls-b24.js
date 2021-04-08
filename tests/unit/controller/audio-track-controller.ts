@@ -223,20 +223,18 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0,
       });
-      audioTrackController.startLoad();
+      audioTrackController.startLoad(0);
 
       expect(shouldLoadTrack).to.have.been.calledTwice;
       expect(shouldLoadTrack).to.have.been.calledWith(trackWithUrl);
       expect(
         shouldLoadTrack.firstCall.returnValue,
-        false,
         'expected shouldLoadTrack to return false before startLoad() is called'
-      );
+      ).to.be.false;
       expect(
         shouldLoadTrack.secondCall.returnValue,
-        true,
         'expected shouldLoadTrack to return true after startLoad() is called'
-      );
+      ).to.be.true;
 
       expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
@@ -265,7 +263,7 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0,
       });
-      audioTrackController.startLoad();
+      audioTrackController.startLoad(0);
 
       expect(shouldLoadTrack).to.have.been.calledTwice;
       expect(shouldLoadTrack).to.have.been.calledWith(trackWithOutUrl);

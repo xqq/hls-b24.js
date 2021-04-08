@@ -10,10 +10,11 @@ import FPSController from './controller/fps-controller';
 import EMEController from './controller/eme-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
-import * as Cues from './utils/cues';
+import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { logger } from './utils/logger';
 
+import type { CuesInterface } from './utils/cues';
 import type { MediaKeyFunc } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
@@ -22,7 +23,7 @@ import type {
   PlaylistLoaderContext,
 } from './types/loader';
 
-type ABRControllerConfig = {
+export type ABRControllerConfig = {
   abrEwmaFastLive: number;
   abrEwmaSlowLive: number;
   abrEwmaFastVoD: number;
@@ -37,11 +38,12 @@ type ABRControllerConfig = {
 
 export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
+  backBufferLength: number;
   liveDurationInfinity: boolean;
-  liveBackBufferLength: number;
+  liveBackBufferLength: number | null;
 };
 
-type CapLevelControllerConfig = {
+export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
@@ -52,13 +54,14 @@ export type DRMSystemOptions = {
 
 export type EMEControllerConfig = {
   licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  licenseResponseCallback?: (xhr: XMLHttpRequest, url: string) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
   drmSystemOptions: DRMSystemOptions;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
-type FragmentLoaderConfig = {
+export type FragmentLoaderConfig = {
   fLoader?: { new (confg: HlsConfig): Loader<FragmentLoaderContext> };
 
   fragLoadingTimeOut: number;
@@ -67,13 +70,13 @@ type FragmentLoaderConfig = {
   fragLoadingMaxRetryTimeout: number;
 };
 
-type FPSControllerConfig = {
+export type FPSControllerConfig = {
   capLevelOnFPSDrop: boolean;
   fpsDroppedMonitoringPeriod: number;
   fpsDroppedMonitoringThreshold: number;
 };
 
-type LevelControllerConfig = {
+export type LevelControllerConfig = {
   startLevel?: number;
 };
 
@@ -82,7 +85,7 @@ export type MP4RemuxerConfig = {
   maxAudioFramesDrift: number;
 };
 
-type PlaylistLoaderConfig = {
+export type PlaylistLoaderConfig = {
   pLoader?: { new (confg: HlsConfig): Loader<PlaylistLoaderContext> };
 
   manifestLoadingTimeOut: number;
@@ -96,7 +99,7 @@ type PlaylistLoaderConfig = {
   levelLoadingMaxRetryTimeout: number;
 };
 
-type StreamControllerConfig = {
+export type StreamControllerConfig = {
   autoStartLoad: boolean;
   startPosition: number;
   defaultAudioCodec?: string;
@@ -113,7 +116,7 @@ type StreamControllerConfig = {
   testBandwidth: boolean;
 };
 
-type LatencyControllerConfig = {
+export type LatencyControllerConfig = {
   liveSyncDurationCount: number;
   liveMaxLatencyDurationCount: number;
   liveSyncDuration?: number;
@@ -121,8 +124,8 @@ type LatencyControllerConfig = {
   maxLiveSyncPlaybackRate: number;
 };
 
-type TimelineControllerConfig = {
-  cueHandler: Cues.CuesInterface;
+export type TimelineControllerConfig = {
+  cueHandler: CuesInterface;
   enableCEA708Captions: boolean;
   enableWebVTT: boolean;
   enableIMSC1: boolean;
@@ -137,7 +140,7 @@ type TimelineControllerConfig = {
   renderTextTracksNatively: boolean;
 };
 
-type TSDemuxerConfig = {
+export type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean;
 };
 
@@ -191,6 +194,7 @@ export const hlsDefaultConfig: HlsConfig = {
   capLevelToPlayerSize: false, // used by cap-level-controller
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
+  backBufferLength: Infinity, // used by buffer-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.1, // used by stream-controller
   highBufferWatchdogPeriod: 2, // used by stream-controller
@@ -203,7 +207,7 @@ export const hlsDefaultConfig: HlsConfig = {
   liveMaxLatencyDuration: undefined, // used by latency-controller
   maxLiveSyncPlaybackRate: 1, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
-  liveBackBufferLength: Infinity, // used by buffer-controller
+  liveBackBufferLength: null, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
   enableSoftwareAES: true, // used by decrypter
@@ -230,6 +234,7 @@ export const hlsDefaultConfig: HlsConfig = {
   pLoader: undefined, // used by playlist-loader
   xhrSetup: undefined, // used by xhr-loader
   licenseXhrSetup: undefined, // used by eme-controller
+  licenseResponseCallback: undefined, // used by eme-controller
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,

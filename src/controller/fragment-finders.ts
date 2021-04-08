@@ -1,5 +1,5 @@
 import BinarySearch from '../utils/binary-search';
-import Fragment from '../loader/fragment';
+import { Fragment } from '../loader/fragment';
 
 /**
  * Returns first fragment whose endPdt value exceeds the given PDT.
@@ -157,11 +157,14 @@ export function pdtWithinToleranceTest(
   return endProgramDateTime - candidateLookupTolerance > pdtBufferEnd;
 }
 
-export function findFragWithCC(fragments, CC): Fragment | null {
+export function findFragWithCC(
+  fragments: Fragment[],
+  cc: number
+): Fragment | null {
   return BinarySearch.search(fragments, (candidate) => {
-    if (candidate.cc < CC) {
+    if (candidate.cc < cc) {
       return 1;
-    } else if (candidate.cc > CC) {
+    } else if (candidate.cc > cc) {
       return -1;
     } else {
       return 0;

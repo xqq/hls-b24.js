@@ -35,6 +35,10 @@ class SubtitleTrackController extends BasePlaylistController {
 
   public destroy() {
     this.unregisterListeners();
+    this.tracks.length = 0;
+    this.tracksInGroup.length = 0;
+    // @ts-ignore
+    this.trackChangeListener = null;
     super.destroy();
   }
 
@@ -241,12 +245,11 @@ class SubtitleTrackController extends BasePlaylistController {
     return this.tracksInGroup;
   }
 
-  /** get index of the selected subtitle track (index in subtitle track lists) **/
+  /** get/set index of the selected subtitle track (based on index in subtitle track lists) **/
   get subtitleTrack(): number {
     return this.trackId;
   }
 
-  /** select a subtitle track, based on its index in subtitle track lists**/
   set subtitleTrack(newId: number) {
     this.selectDefaultTrack = false;
     const lastTrack = this.tracksInGroup

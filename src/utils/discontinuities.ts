@@ -1,7 +1,7 @@
 import { logger } from './logger';
 
-import type Fragment from '../loader/fragment';
-import type LevelDetails from '../loader/level-details';
+import type { Fragment } from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
 import type { RequiredProperties } from '../types/general';
 import { adjustSliding } from '../controller/level-helper';
@@ -134,7 +134,7 @@ function alignDiscontinuities(
       lastLevel.details,
       details
     );
-    if (referenceFrag?.start) {
+    if (referenceFrag && Number.isFinite(referenceFrag.start)) {
       logger.log(
         `Adjusting PTS using last level due to CC increase within current level ${details.url}`
       );

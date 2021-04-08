@@ -1,10 +1,10 @@
 import * as URLToolkit from 'url-toolkit';
 
-import Fragment, { Part } from './fragment';
-import LevelDetails from './level-details';
-import LevelKey from './level-key';
+import { Fragment, Part } from './fragment';
+import { LevelDetails } from './level-details';
+import { LevelKey } from './level-key';
 
-import AttrList from '../utils/attr-list';
+import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import type { CodecType } from '../utils/codecs';
 import { isCodecType } from '../utils/codecs';
@@ -19,7 +19,7 @@ import type { LevelAttributes, LevelParsed } from '../types/level';
 type M3U8ParserFragments = Array<Fragment | null>;
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)|#EXT-X-SESSION-DATA:([^\n\r]*)[\r\n]+/g;
+const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-SESSION-DATA:([^\r\n]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
@@ -488,8 +488,12 @@ export default class M3U8Parser {
     if (prevFrag && !prevFrag.relurl) {
       fragments.pop();
       totalduration -= prevFrag.duration;
-      level.fragmentHint = prevFrag;
-    } else {
+      if (level.partList) {
+        level.fragmentHint = prevFrag;
+      }
+    } else if (level.partList) {
+      assignProgramDateTime(frag, prevFrag);
+      frag.cc = discontinuityCounter;
       level.fragmentHint = frag;
     }
     const fragmentLength = fragments.length;
@@ -527,7 +531,7 @@ export default class M3U8Parser {
       level.endSN = 0;
       level.startCC = 0;
     }
-    if (level.partList) {
+    if (level.fragmentHint) {
       totalduration += level.fragmentHint.duration;
     }
     level.totalduration = totalduration;

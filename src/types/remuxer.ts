@@ -3,7 +3,6 @@ import {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
   DemuxedPrivdataTrack,
-  DemuxedTrack,
   DemuxedUserdataTrack,
   DemuxedVideoTrack,
   MetadataSample,

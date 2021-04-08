@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 import type { FragmentTracker } from './fragment-tracker';
-import Fragment from '../loader/fragment';
+import { Fragment } from '../loader/fragment';
 
 export const STALL_MINIMUM_DURATION_MS = 250;
 export const MAX_START_GAP_JUMP = 2.0;
@@ -29,6 +29,11 @@ export default class GapController {
     this.media = media;
     this.fragmentTracker = fragmentTracker;
     this.hls = hls;
+  }
+
+  public destroy() {
+    // @ts-ignore
+    this.hls = this.fragmentTracker = this.media = null;
   }
 
   /**

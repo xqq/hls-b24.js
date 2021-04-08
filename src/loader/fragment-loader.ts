@@ -1,5 +1,5 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
-import Fragment from './fragment';
+import { Fragment } from './fragment';
 import {
   Loader,
   LoaderConfiguration,
@@ -18,6 +18,13 @@ export default class FragmentLoader {
 
   constructor(config: HlsConfig) {
     this.config = config;
+  }
+
+  destroy() {
+    if (this.loader) {
+      this.loader.destroy();
+      this.loader = null;
+    }
   }
 
   abort() {
@@ -53,6 +60,9 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
+      if (this.loader) {
+        this.loader.destroy();
+      }
       const loader = (this.loader = frag.loader = FragmentILoader
         ? new FragmentILoader(config)
         : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
@@ -139,6 +149,9 @@ export default class FragmentLoader {
     const DefaultILoader = config.loader;
 
     return new Promise((resolve, reject) => {
+      if (this.loader) {
+        this.loader.destroy();
+      }
       const loader = (this.loader = frag.loader = FragmentILoader
         ? new FragmentILoader(config)
         : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
@@ -246,6 +259,7 @@ export default class FragmentLoader {
       self.clearTimeout(this.partLoadTimeout);
       this.loader = null;
     }
+    loader.destroy();
   }
 }
 

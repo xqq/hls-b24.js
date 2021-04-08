@@ -1,11 +1,11 @@
 import Chart from 'chart.js';
 import 'chartjs-plugin-zoom';
 import { applyChartInstanceOverrides, hhmmss } from './chartjs-horizontal-bar';
-import Fragment from '../../src/loader/fragment';
+import { Fragment } from '../../src/loader/fragment';
 import type { Level } from '../../src/types/level';
 import type { TrackSet } from '../../src/types/track';
 import type { MediaPlaylist } from '../../src/types/media-playlist';
-import type LevelDetails from '../../src/loader/level-details';
+import type { LevelDetails } from '../../src/loader/level-details';
 import {
   FragChangedData,
   FragLoadedData,
@@ -64,7 +64,7 @@ export class TimelineChart {
       options: Object.assign(getChartOptions(), chartJsOptions),
       plugins: [
         {
-          afterRender: () => {
+          afterRender: (chart) => {
             this.imageDataBuffer = null;
             this.drawCurrentTime();
           },
@@ -83,7 +83,7 @@ export class TimelineChart {
         const obj = dataset.data![(element[0] as any)._index];
         // eslint-disable-next-line no-console
         console.log(obj);
-        if (self.hls && self.hls.media) {
+        if (self.hls?.media) {
           const scale = this.chartScales[X_AXIS_SECONDS];
           const pos = Chart.helpers.getRelativePosition(event, chart);
           self.hls.media.currentTime = scale.getValueForPixel(pos.x);
@@ -283,13 +283,11 @@ export class TimelineChart {
   updateLevelOrTrack(details: LevelDetails) {
     const { targetduration, totalduration, url } = details;
     const { datasets } = this.chart.data;
-    // eslint-disable-next-line no-restricted-properties
-    const deliveryDirectivePattern = /[?&]_HLS_(?:msn|part|skip)=[^?&]+/g;
     const levelDataSet = arrayFind(
       datasets,
       (dataset) =>
-        dataset.url?.toString().replace(deliveryDirectivePattern, '') ===
-        url.replace(deliveryDirectivePattern, '')
+        stripDeliveryDirectives(url) ===
+        stripDeliveryDirectives(dataset.url || '')
     );
     if (!levelDataSet) {
       return;
@@ -300,37 +298,41 @@ export class TimelineChart {
       details.fragments.forEach((fragment) => {
         // TODO: keep track of initial playlist start and duration so that we can show drift and pts offset
         // (Make that a feature of hls.js v1.0.0 fragments)
-        data.push(
-          Object.assign(
-            {
-              dataType: 'fragment',
-            },
-            fragment
-          )
+        const chartFragment = Object.assign(
+          {
+            dataType: 'fragment',
+          },
+          fragment,
+          // Remove loader references for GC
+          { loader: null }
         );
+        data.push(chartFragment);
       });
     }
     if (details.partList) {
       details.partList.forEach((part) => {
-        data.push(
-          Object.assign(
-            {
-              dataType: 'part',
-              start: part.fragment.start + part.fragOffset,
-            },
-            part
-          )
+        const chartPart = Object.assign(
+          {
+            dataType: 'part',
+            start: part.fragment.start + part.fragOffset,
+          },
+          part,
+          {
+            fragment: Object.assign({}, part.fragment, { loader: null }),
+          }
         );
+        data.push(chartPart);
       });
       if (details.fragmentHint) {
-        data.push(
-          Object.assign(
-            {
-              dataType: 'fragmentHint',
-            },
-            details.fragmentHint
-          )
+        const chartFragment = Object.assign(
+          {
+            dataType: 'fragmentHint',
+          },
+          details.fragmentHint,
+          // Remove loader references for GC
+          { loader: null }
         );
+        data.push(chartFragment);
       }
     }
     const start = getPlaylistStart(details);
@@ -341,6 +343,7 @@ export class TimelineChart {
     if (this.hidden) {
       return;
     }
+    self.cancelAnimationFrame(this.rafDebounceRequestId);
     this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
@@ -396,6 +399,7 @@ export class TimelineChart {
     if (this.hidden) {
       return;
     }
+    self.cancelAnimationFrame(this.rafDebounceRequestId);
     this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
@@ -431,7 +435,7 @@ export class TimelineChart {
           sourceBuffer,
         })
       );
-      sourceBuffer.onupdate = () => {
+      sourceBuffer.addEventListener('update', () => {
         try {
           replaceTimeRangeTuples(sourceBuffer.buffered, data);
         } catch (error) {
@@ -441,7 +445,7 @@ export class TimelineChart {
         }
         replaceTimeRangeTuples(media.buffered, mediaBufferData);
         this.update();
-      };
+      });
     });
 
     if (trackTypes.length === 0) {
@@ -593,14 +597,16 @@ export class TimelineChart {
       return;
     }
     self.cancelAnimationFrame(this.rafDebounceRequestId);
-    this.rafDebounceRequestId = self.requestAnimationFrame(() => {
-      this.update();
-    });
+    this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
   drawCurrentTime() {
     const chart = this.chart;
-    if (self.hls && self.hls.media && chart.data.datasets!.length) {
+    // @ts-ignore
+    if (chart?.panning) {
+      return;
+    }
+    if (self.hls?.media && chart.data.datasets!.length) {
       const currentTime = self.hls.media.currentTime;
       const scale = this.chartScales[X_AXIS_SECONDS];
       const ctx = chart.ctx;
@@ -659,6 +665,19 @@ export class TimelineChart {
   }
 }
 
+function stripDeliveryDirectives(url: string): string {
+  try {
+    const webUrl: URL = new self.URL(url);
+    webUrl.searchParams.delete('_HLS_msn');
+    webUrl.searchParams.delete('_HLS_part');
+    webUrl.searchParams.delete('_HLS_skip');
+    webUrl.searchParams.sort();
+    return webUrl.href;
+  } catch (e) {
+    return url.replace(/[?&]_HLS_(?:msn|part|skip)=[^?&]+/g, '');
+  }
+}
+
 function datasetWithDefaults(options) {
   return Object.assign(
     {
@@ -672,14 +691,12 @@ function datasetWithDefaults(options) {
 }
 
 function getPlaylistStart(details: LevelDetails): number {
-  return details.fragments && details.fragments.length
-    ? details.fragments[0].start
-    : 0;
+  return details.fragments?.length ? details.fragments[0].start : 0;
 }
 
 function getLevelName(level: Level, index: number) {
   let label = '(main playlist)';
-  if (level.attrs && level.attrs.BANDWIDTH) {
+  if (level.attrs?.BANDWIDTH) {
     label = `${getMainLevelAttribute(level)}@${level.attrs.BANDWIDTH}`;
     if (level.name) {
       label = `${label} (${level.name})`;
@@ -812,6 +829,13 @@ function getChartOptions() {
           rangeMax: {
             x: null,
             y: null,
+          },
+          threshold: 100,
+          onPan: function ({ chart }) {
+            chart.panning = true;
+          },
+          onPanComplete: function ({ chart }) {
+            chart.panning = false;
           },
         },
         zoom: {

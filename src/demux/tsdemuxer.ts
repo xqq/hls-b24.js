@@ -448,13 +448,15 @@ class TSDemuxer implements Demuxer {
       privTrack.pesData = privData;
     }
 
-    return {
+    const demuxResult: DemuxerResult = {
       audioTrack,
       avcTrack,
       id3Track,
       textTrack: this._txtTrack,
       privTrack,
     };
+    this.extractRemainingSamples(demuxResult);
+    return demuxResult;
   }
 
   public flush(): DemuxerResult | Promise<DemuxerResult> {

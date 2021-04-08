@@ -11,17 +11,12 @@ import LevelController from './controller/level-controller';
 
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
-import {
-  enableStreamingMode,
-  HlsConfig,
-  hlsDefaultConfig,
-  mergeConfig,
-} from './config';
-
+import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
+import type { HlsConfig } from './config';
 import { Events } from './events';
 import { EventEmitter } from 'eventemitter3';
 import { Level } from './types/level';
-import { MediaPlaylist } from './types/media-playlist';
+import type { MediaPlaylist } from './types/media-playlist';
 import AudioTrackController from './controller/audio-track-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import ID3TrackController from './controller/id3-track-controller';
@@ -31,6 +26,7 @@ import AbrController from './controller/abr-controller';
 import LatencyController from './controller/latency-controller';
 import { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import type { HlsEventEmitter, HlsListeners } from './events';
+import { Fragment } from './loader/fragment';
 
 /**
  * @module Hls
@@ -132,13 +128,6 @@ export default class Hls implements HlsEventEmitter {
       fragmentTracker
     ));
 
-    // Level Controller initiates loading after all controllers have received MANIFEST_PARSED
-    levelController.onParsedComplete = () => {
-      if (config.autoStartLoad || streamController.forceStartLoad) {
-        this.startLoad(config.startPosition);
-      }
-    };
-
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
     // fpsController uses streamController to switch when frames are being dropped
@@ -211,75 +200,17 @@ export default class Hls implements HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context: Context = this as any
   ) {
-    const hlsjs = this;
-    this._emitter.on(
-      event,
-      function (this: Context, ...args: unknown[]) {
-        if (hlsjs.config.debug) {
-          listener.apply(this, args);
-        } else {
-          try {
-            listener.apply(this, args);
-          } catch (e) {
-            logger.error(
-              'An internal error happened while handling event ' +
-                event +
-                '. Error message: "' +
-                e.message +
-                '". Here is a stacktrace:',
-              e
-            );
-            hlsjs.trigger(Events.ERROR, {
-              type: ErrorTypes.OTHER_ERROR,
-              details: ErrorDetails.INTERNAL_EXCEPTION,
-              fatal: false,
-              event: event,
-              error: e,
-            });
-          }
-        }
-      },
-      context
-    );
+    this._emitter.on(event, listener, context);
   }
 
   once<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context: Context = this as any
   ) {
-    const hlsjs = this;
-    this._emitter.once(
-      event,
-      function (this: Context, ...args: unknown[]) {
-        if (hlsjs.config.debug) {
-          listener.apply(this, args);
-        } else {
-          try {
-            listener.apply(this, args);
-          } catch (e) {
-            logger.error(
-              'An internal error happened while handling event ' +
-                event +
-                '. Error message: "' +
-                e.message +
-                '". Here is a stacktrace:',
-              e
-            );
-            hlsjs.trigger(Events.ERROR, {
-              type: ErrorTypes.OTHER_ERROR,
-              details: ErrorDetails.INTERNAL_EXCEPTION,
-              fatal: false,
-              event: event,
-              error: e,
-            });
-          }
-        }
-      },
-      context
-    );
+    this._emitter.once(event, listener, context);
   }
 
   removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined) {
@@ -289,7 +220,7 @@ export default class Hls implements HlsEventEmitter {
   off<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener?: HlsListeners[E] | undefined,
-    context?: Context,
+    context: Context = this as any,
     once?: boolean | undefined
   ) {
     this._emitter.off(event, listener, context, once);
@@ -311,7 +242,30 @@ export default class Hls implements HlsEventEmitter {
     event: E,
     eventObject: Parameters<HlsListeners[E]>[1]
   ): boolean {
-    return this._emitter.emit(event, event, eventObject);
+    if (this.config.debug) {
+      return this.emit(event, event, eventObject);
+    } else {
+      try {
+        return this.emit(event, event, eventObject);
+      } catch (e) {
+        logger.error(
+          'An internal error happened while handling event ' +
+            event +
+            '. Error message: "' +
+            e.message +
+            '". Here is a stacktrace:',
+          e
+        );
+        this.trigger(Events.ERROR, {
+          type: ErrorTypes.OTHER_ERROR,
+          details: ErrorDetails.INTERNAL_EXCEPTION,
+          fatal: false,
+          event: event,
+          error: e,
+        });
+      }
+    }
+    return false;
   }
 
   listenerCount<E extends keyof HlsListeners>(event: E): number {
@@ -325,11 +279,19 @@ export default class Hls implements HlsEventEmitter {
     logger.log('destroy');
     this.trigger(Events.DESTROYING, undefined);
     this.detachMedia();
-    this.networkControllers.forEach((component) => component.destroy());
-    this.coreComponents.forEach((component) => component.destroy());
-    this.url = null;
     this.removeAllListeners();
     this._autoLevelCapping = -1;
+    this.url = null;
+    if (this.networkControllers) {
+      this.networkControllers.forEach((component) => component.destroy());
+      // @ts-ignore
+      this.networkControllers = null;
+    }
+    if (this.coreComponents) {
+      this.coreComponents.forEach((component) => component.destroy());
+      // @ts-ignore
+      this.coreComponents = null;
+    }
   }
 
   /**
@@ -426,7 +388,8 @@ export default class Hls implements HlsEventEmitter {
    * @type {Level[]}
    */
   get levels(): Array<Level> {
-    return this.levelController.levels ? this.levelController.levels : [];
+    const levels = this.levelController.levels;
+    return levels ? levels : [];
   }
 
   /**
@@ -446,6 +409,7 @@ export default class Hls implements HlsEventEmitter {
   set currentLevel(newLevel: number) {
     logger.log(`set currentLevel:${newLevel}`);
     this.loadLevel = newLevel;
+    this.abrController.clearTimer();
     this.streamController.immediateLevelSwitch();
   }
 
@@ -594,7 +558,11 @@ export default class Hls implements HlsEventEmitter {
    * @type {number}
    */
   get bandwidthEstimate(): number {
-    return this.abrController.bwEstimator.getEstimate();
+    const { bwEstimator } = this.abrController;
+    if (!bwEstimator) {
+      return NaN;
+    }
+    return bwEstimator.getEstimate();
   }
 
   /**
@@ -820,4 +788,150 @@ export default class Hls implements HlsEventEmitter {
   get targetLatency(): number | null {
     return this.latencyController.targetLatency;
   }
+
+  /**
+   * the rate at which the edge of the current live playlist is advancing or 1 if there is none
+   * @type {number}
+   */
+  get drift(): number | null {
+    return this.latencyController.drift;
+  }
+
+  /**
+   * set to true when startLoad is called before MANIFEST_PARSED event
+   * @type {boolean}
+   */
+  get forceStartLoad(): boolean {
+    return this.streamController.forceStartLoad;
+  }
 }
+
+export type {
+  MediaPlaylist,
+  ErrorDetails,
+  ErrorTypes,
+  Events,
+  Level,
+  HlsListeners,
+  HlsEventEmitter,
+  HlsConfig,
+  Fragment,
+};
+
+export type {
+  ABRControllerConfig,
+  BufferControllerConfig,
+  CapLevelControllerConfig,
+  EMEControllerConfig,
+  DRMSystemOptions,
+  FPSControllerConfig,
+  FragmentLoaderConfig,
+  LevelControllerConfig,
+  MP4RemuxerConfig,
+  PlaylistLoaderConfig,
+  StreamControllerConfig,
+  LatencyControllerConfig,
+  TimelineControllerConfig,
+  TSDemuxerConfig,
+} from './config';
+export type { CuesInterface } from './utils/cues';
+export type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
+export type { LoadStats } from './loader/load-stats';
+export type { LevelKey } from './loader/level-key';
+export type { LevelDetails } from './loader/level-details';
+export type { SourceBufferName } from './types/buffer';
+export type { MetadataSample, UserdataSample } from './types/demuxer';
+export type {
+  LevelParsed,
+  LevelAttributes,
+  HlsUrlParameters,
+  HlsSkip,
+} from './types/level';
+export type {
+  PlaylistLevelType,
+  HlsChunkPerformanceTiming,
+  HlsPerformanceTiming,
+  PlaylistContextType,
+  PlaylistLoaderContext,
+  FragmentLoaderContext,
+  Loader,
+  LoaderStats,
+  LoaderContext,
+  LoaderResponse,
+  LoaderConfiguration,
+  LoaderCallbacks,
+  LoaderOnProgress,
+  LoaderOnAbort,
+  LoaderOnError,
+  LoaderOnSuccess,
+  LoaderOnTimeout,
+  HlsProgressivePerformanceTiming,
+} from './types/loader';
+export type {
+  MediaPlaylistType,
+  MainPlaylistType,
+  AudioPlaylistType,
+  SubtitlePlaylistType,
+} from './types/media-playlist';
+export type { Track, TrackSet } from './types/track';
+export type { ChunkMetadata } from './types/transmuxer';
+export type {
+  BaseSegment,
+  Part,
+  ElementaryStreams,
+  ElementaryStreamTypes,
+  ElementaryStreamInfo,
+} from './loader/fragment';
+export type {
+  TrackLoadingData,
+  TrackLoadedData,
+  AudioTrackLoadedData,
+  AudioTracksUpdatedData,
+  AudioTrackSwitchedData,
+  AudioTrackSwitchingData,
+  BackBufferData,
+  BufferAppendedData,
+  BufferAppendingData,
+  BufferCodecsData,
+  BufferCreatedData,
+  BufferEOSData,
+  BufferFlushedData,
+  BufferFlushingData,
+  CuesParsedData,
+  ErrorData,
+  FPSDropData,
+  FPSDropLevelCappingData,
+  FragBufferedData,
+  FragChangedData,
+  FragDecryptedData,
+  FragLoadedData,
+  FragLoadEmergencyAbortedData,
+  FragLoadingData,
+  FragParsedData,
+  FragParsingInitSegmentData,
+  FragParsingMetadataData,
+  FragParsingUserdataData,
+  InitPTSFoundData,
+  KeyLoadedData,
+  KeyLoadingData,
+  LevelLoadedData,
+  LevelLoadingData,
+  LevelPTSUpdatedData,
+  LevelsUpdatedData,
+  LevelSwitchedData,
+  LevelSwitchingData,
+  LevelUpdatedData,
+  LiveBackBufferData,
+  ManifestLoadedData,
+  ManifestLoadingData,
+  ManifestParsedData,
+  MediaAttachedData,
+  MediaAttachingData,
+  NonNativeTextTrack,
+  NonNativeTextTracksData,
+  SubtitleFragProcessedData,
+  SubtitleTrackLoadedData,
+  SubtitleTracksUpdatedData,
+  SubtitleTrackSwitchData,
+} from './types/events';
+export type { AttrList } from './utils/attr-list';

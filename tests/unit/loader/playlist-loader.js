@@ -1,5 +1,5 @@
 import M3U8Parser from '../../../src/loader/m3u8-parser';
-import AttrList from '../../../src/utils/attr-list';
+import { AttrList } from '../../../src/utils/attr-list';
 import { PlaylistLevelType } from '../../../src/types/loader';
 
 describe('PlaylistLoader', function () {
@@ -43,6 +43,22 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core'
     );
     expect(result.sessionData).to.equal(null);
+  });
+
+  it('parses manifest containing comment', function () {
+    const manifest = `#EXTM3U
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+# some comment
+http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+
+    const result = M3U8Parser.parseMasterPlaylist(
+      manifest,
+      'http://www.dailymotion.com'
+    );
+    expect(result.levels).to.have.lengthOf(1);
+    expect(result.levels[0].url).to.equal(
+      'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core'
+    );
   });
 
   it('parses manifest without codecs', function () {
@@ -1124,7 +1140,7 @@ fileSequence1151231.ts
 fileSequence1151232.ts
 #EXT-X-PART:DURATION=1.00000,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.1.ts"
 #EXT-X-PART:DURATION=0.99999,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.2.ts"
-#EXT-X-PART:DURATION=1.00000,INDEPENDENT=NO,URI="lowLatencyHLS.php?segment=filePart1151233.3.ts"
+#EXT-X-PART:DURATION=1.00000,URI="lowLatencyHLS.php?segment=filePart1151233.3.ts"
 #EXT-X-PART:DURATION=1.00000,GAP=YES,INDEPENDENT=YES,URI="lowLatencyHLS.php?segment=filePart1151233.4.ts"
 #EXTINF:4.00000,
 fileSequence1151233.ts

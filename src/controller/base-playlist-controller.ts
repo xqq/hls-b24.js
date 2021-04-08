@@ -3,7 +3,7 @@ import type { NetworkComponentAPI } from '../types/component-api';
 import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
 import { computeReloadInterval } from './level-helper';
 import { logger } from '../utils/logger';
-import type LevelDetails from '../loader/level-details';
+import type { LevelDetails } from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type {
   AudioTrackLoadedData,
@@ -20,8 +20,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   protected timer: number = -1;
   protected canLoad: boolean = false;
   protected retryCount: number = 0;
-  protected readonly log: (msg: any) => void;
-  protected readonly warn: (msg: any) => void;
+  protected log: (msg: any) => void;
+  protected warn: (msg: any) => void;
 
   constructor(hls: Hls, logPrefix: string) {
     this.log = logger.log.bind(logger, `${logPrefix}:`);
@@ -31,6 +31,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
   public destroy(): void {
     this.clearTimer();
+    // @ts-ignore
+    this.hls = this.log = this.warn = null;
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
@@ -127,19 +129,17 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
         LevelHelper.mergeDetails(previousDetails, details);
-        if (!details.advanced) {
-          details.advancedDateTime = previousDetails.advancedDateTime;
-        }
       }
       if (!this.canLoad || !details.live) {
         return;
       }
+      let msn: number | undefined = undefined;
+      let part: number | undefined = undefined;
+      let skip;
       if (details.canBlockReload && details.endSN && details.advanced) {
         // Load level with LL-HLS delivery directives
         const lowLatencyMode = this.hls.config.lowLatencyMode;
         const lastPartIndex = details.lastPartIndex;
-        let msn;
-        let part;
         if (lowLatencyMode) {
           msn = lastPartIndex !== -1 ? details.lastPartSn : details.endSN + 1;
           part = lastPartIndex !== -1 ? lastPartIndex + 1 : undefined;
@@ -185,25 +185,47 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           }
           details.tuneInGoal = currentGoal;
         }
-        let skip = getSkipValue(details, msn);
-        if (data.deliveryDirectives?.skip) {
-          if (details.deltaUpdateFailed) {
-            msn = data.deliveryDirectives.msn;
-            part = data.deliveryDirectives.part;
-            skip = HlsSkip.No;
-          }
-        }
-        this.loadPlaylist(new HlsUrlParameters(msn, part, skip));
+        const deliveryDirectives = this.getDeliveryDirectives(
+          details,
+          data.deliveryDirectives,
+          msn,
+          part
+        );
+        this.loadPlaylist(deliveryDirectives);
         return;
       }
       const reloadInterval = computeReloadInterval(details, stats);
       this.log(
         `reload live playlist ${index} in ${Math.round(reloadInterval)} ms`
       );
-      this.timer = self.setTimeout(() => this.loadPlaylist(), reloadInterval);
+      const deliveryDirectives = this.getDeliveryDirectives(
+        details,
+        data.deliveryDirectives,
+        msn,
+        part
+      );
+      this.timer = self.setTimeout(
+        () => this.loadPlaylist(deliveryDirectives),
+        reloadInterval
+      );
     } else {
       this.clearTimer();
     }
+  }
+
+  private getDeliveryDirectives(
+    details: LevelDetails,
+    previousDeliveryDirectives: HlsUrlParameters | null,
+    msn?: number,
+    part?: number
+  ) {
+    let skip = getSkipValue(details, msn);
+    if (previousDeliveryDirectives?.skip && details.deltaUpdateFailed) {
+      msn = previousDeliveryDirectives.msn;
+      part = previousDeliveryDirectives.part;
+      skip = HlsSkip.No;
+    }
+    return new HlsUrlParameters(msn, part, skip);
   }
 
   protected retryLoadingOrFail(errorEvent: ErrorData): boolean {
