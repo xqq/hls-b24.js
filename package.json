@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
-  "homepage": "https://github.com/xqq/hls.js",
+  "homepage": "https://github.com/xqq/hls-b24.js",
   "authors": "Guillaume du Pontavice <g.du.pontavice@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/xqq/hls.js"
+    "url": "https://github.com/xqq/hls-b24.js"
   },
   "bugs": {
-    "url": "https://github.com/xqq/hls.js/issues"
+    "url": "https://github.com/xqq/hls-b24.js/issues"
   },
   "main": "./dist/hls.js",
   "types": "./dist/hls.js.d.ts",

@@ -1,16 +1,12 @@
-[![npm](https://img.shields.io/npm/v/hls-b24.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls-b24.js/)
+[![npm](https://img.shields.io/npm/v/hls-b24.js.svg?style=flat)](https://www.npmjs.com/package/hls-b24.js/)
 [![](https://data.jsdelivr.com/v1/package/npm/hls-b24.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls-b24.js)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
-
-[![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
-
-Join the discussion via [video-dev.org](https://video-dev.org) in #hlsjs (our Slack channel)
 
 # hls-b24.js
 
 This is an hls.js fork which extracts and provides data callback for ISO/IEC 13818-1 private data PES packets.
 
-# ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
+# ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png) [![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
 
 hls.js is a JavaScript library that implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
